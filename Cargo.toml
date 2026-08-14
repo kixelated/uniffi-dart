@@ -5,7 +5,7 @@ edition = "2021"
 license = "Apache-2 or MIT"
 homepage = "https://github.com/acterglobal/uniffi-dart"
 description = "Dart Frontend for UniFFI"
-rust-version = "1.85"
+rust-version = "1.91"
 
 [features]
 defaults = []
@@ -38,7 +38,7 @@ uniffi_bindgen = { workspace = true }
 camino = "1"
 cargo_metadata = "0.18"
 serde = "1"
-toml = ">=0.8, <=0.9"
+toml = "1"
 genco = "0.17.5"
 proc-macro2 = "1.0.66"
 
