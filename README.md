@@ -10,12 +10,12 @@ Add uniffi-dart as a dependency in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-uniffi-dart = "0.2.1+v0.31.2"
+uniffi-dart = "0.3.0+v0.32.0"
 ```
 
 ## Testing & Fixtures
 
-uniffi-dart includes a **comprehensive test suite** with 30 fixtures covering all major UniFFI functionality:
+uniffi-dart includes a **comprehensive test suite** with fixtures covering all major UniFFI functionality:
 
 ### **Fixture Coverage**
 
@@ -56,7 +56,7 @@ nix develop .#nightly
 ```
 
 The default shell tracks the stable Rust toolchain. The `.#msrv` shell matches
-the declared Rust MSRV, currently 1.85.0.
+the declared Rust MSRV, currently 1.91.0.
 
 Run formatting through the flake:
 
@@ -98,13 +98,11 @@ cargo +nightly nextest run -p hello_world --nocapture
 
 ### **Identified Blockers**
 
-Our comprehensive fixture suite has identified 5 critical blocking features:
+Our comprehensive fixture suite has identified 3 critical blocking features:
 
-1. **HashMap/Map support** - Core collection type missing
-2. **Proc-macro support** - Modern UniFFI development pattern
-3. **Dictionary default values** - Named parameters with defaults  
-4. **Trait method support** - Advanced trait functionality
-5. **BigInt support** - Large integer boundary handling
+1. **Dictionary default values** - Named parameters with defaults
+2. **Trait method support** - Advanced trait functionality
+3. **BigInt support** - Large integer boundary handling
 
 ## Versioning
 
@@ -126,6 +124,7 @@ uniffi-dart version and `A.B.C` is the targeted uniffi-rs version.
 
 | uniffi-rs target | Latest uniffi-dart release |
 |------------------|----------------------------|
+| v0.32.0          | v0.3.0+v0.32.0             |
 | v0.31.2          | v0.2.1+v0.31.2             |
 | v0.30.0          | v0.1.1+v0.30.0             |
 
