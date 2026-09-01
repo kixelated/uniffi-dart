@@ -133,3 +133,5 @@ uniffi-dart version and `A.B.C` is the targeted uniffi-rs version.
 The code is released under MIT License. See the LICENSE file in the repository root for details.
 
 The project is building on top of the great work of Mozillas UniFFI, with inspirations from other external frontends (like Kotlin and Go) and with the help of the [ffi-gen](https://github.com/acterglobal/ffi-gen) lib. Thanks folks!
+
+<!-- CI attribution baseline, temporary branch -->
