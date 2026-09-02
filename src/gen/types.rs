@@ -351,7 +351,13 @@ pub fn runtime_scaffolding(ci: &ComponentInterface) -> dart::Tokens {
                 try {
                     final rawResult = ffiCall(status);
                     checkCallStatus(errorHandler ?? NullRustCallStatusErrorHandler(), status);
-                    return lifter(rawResult);
+                    final lifted = lifter(rawResult);
+                    // Rust hands ownership of a returned buffer to us. Every lifter
+                    // copies out of it, so it is dead once lifting is done.
+                    if (rawResult is RustBuffer) {
+                        rawResult.free();
+                    }
+                    return lifted;
                 } finally {
                     calloc.free(status);
                 }
@@ -421,7 +427,14 @@ pub fn runtime_scaffolding(ci: &ComponentInterface) -> dart::Tokens {
                 final bytes = calloc<ForeignBytes>();
                 bytes.ref.len = length;
                 bytes.ref.data = frameData;
-                return RustBuffer.fromBytes(bytes.ref);
+                try {
+                    // Rust copies out of the ForeignBytes, so the scratch above is
+                    // ours to release once fromBytes returns.
+                    return RustBuffer.fromBytes(bytes.ref);
+                } finally {
+                    calloc.free(frameData);
+                    calloc.free(bytes);
+                }
             }
 
             // Lowers a `Uint8List` into a `ForeignBytes` for a borrowed `&[u8]`

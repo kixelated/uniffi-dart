@@ -40,7 +40,9 @@ macro_rules! impl_renderable_for_primitive {
 
                         static LiftRetVal<$type_signature> read(Uint8List buf) {
                             final length = buf.buffer.asByteData(buf.offsetInBytes).getInt32(0);
-                            final bytes = Uint8List.view(buf.buffer, buf.offsetInBytes + 4, length);
+                            // Copy rather than view: the RustBuffer this reads from is
+                            // freed as soon as lifting finishes, and a view would dangle.
+                            final bytes = buf.sublist(4, 4 + length);
                             return LiftRetVal(bytes, length + 4);
                         }
 
