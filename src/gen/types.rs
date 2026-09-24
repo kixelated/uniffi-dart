@@ -322,10 +322,10 @@ pub fn runtime_scaffolding(ci: &ComponentInterface) -> dart::Tokens {
                 if (status.ref.code == CALL_SUCCESS) {
                 return;
                 } else if (status.ref.code == CALL_ERROR) {
-                throw errorHandler.lift(status.ref.errorBuf);
+                throw liftAndFree(status.ref.errorBuf, errorHandler.lift);
                 } else if (status.ref.code == CALL_UNEXPECTED_ERROR) {
                 if (status.ref.errorBuf.len > 0) {
-                    throw UniffiInternalError.panicked(FfiConverterString.lift(status.ref.errorBuf));
+                    throw UniffiInternalError.panicked(liftAndFree(status.ref.errorBuf, FfiConverterString.lift));
                 } else {
                     throw UniffiInternalError.panicked("Rust panic");
                 }
@@ -345,19 +345,26 @@ pub fn runtime_scaffolding(ci: &ComponentInterface) -> dart::Tokens {
                 }
             }
 
+            // Rust hands ownership of a returned or error buffer to us. Every lifter
+            // copies out of it, so it is dead once lifting is done. The raw value is
+            // also instantiated with pointers and integers, which own nothing here.
+            T liftAndFree<T, F>(F raw, T Function(F) lifter) {
+                try {
+                    return lifter(raw);
+                } finally {
+                    if (raw is RustBuffer) {
+                        raw.free();
+                    }
+                }
+            }
+
             // New version that separates FFI call from lifting to avoid deserializing garbage on error
             T rustCallWithLifter<T, F>(F Function(Pointer<RustCallStatus>) ffiCall, T Function(F) lifter, [UniffiRustCallStatusErrorHandler? errorHandler]) {
                 final status = calloc<RustCallStatus>();
                 try {
                     final rawResult = ffiCall(status);
                     checkCallStatus(errorHandler ?? NullRustCallStatusErrorHandler(), status);
-                    final lifted = lifter(rawResult);
-                    // Rust hands ownership of a returned buffer to us. Every lifter
-                    // copies out of it, so it is dead once lifting is done.
-                    if (rawResult is RustBuffer) {
-                        rawResult.free();
-                    }
-                    return lifted;
+                    return liftAndFree(rawResult, lifter);
                 } finally {
                     calloc.free(status);
                 }
@@ -366,7 +373,6 @@ pub fn runtime_scaffolding(ci: &ComponentInterface) -> dart::Tokens {
             class NullRustCallStatusErrorHandler extends UniffiRustCallStatusErrorHandler {
                 @override
                 Exception lift(RustBuffer errorBuf) {
-                errorBuf.free();
                 return UniffiInternalError.panicked("Unexpected CALL_ERROR");
                 }
             }
@@ -601,7 +607,7 @@ pub fn runtime_scaffolding(ci: &ComponentInterface) -> dart::Tokens {
                             errorHandler ?? NullRustCallStatusErrorHandler(),
                             status,
                         );
-                        return liftFunc(result);
+                        return liftAndFree(result, liftFunc);
                     } finally {
                         calloc.free(status);
                     }
