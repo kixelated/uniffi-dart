@@ -607,7 +607,10 @@ pub fn runtime_scaffolding(ci: &ComponentInterface) -> dart::Tokens {
                             errorHandler ?? NullRustCallStatusErrorHandler(),
                             status,
                         );
-                        return liftAndFree(result, liftFunc);
+                        // Explicit type arguments: inferred from the async return
+                        // context, T would widen to FutureOr<T> and trip
+                        // unawaited_return_in_try_block.
+                        return liftAndFree<T, F>(result, liftFunc);
                     } finally {
                         calloc.free(status);
                     }
