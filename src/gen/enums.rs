@@ -197,6 +197,25 @@ pub fn generate_enum(obj: &Enum, type_helper: &dyn TypeHelperRenderer) -> dart::
             candidate
         };
 
+        // An exported Display becomes toString() on the base class.
+        let display_to_string: Option<dart::Tokens> =
+            obj.uniffi_trait_methods().display_fmt.map(|fmt| {
+                let ret = fmt.return_type().expect("Display returns a string");
+                type_helper.include_once_check(&ret.as_codetype().canonical_name(), ret);
+                let lifter = ret.as_codetype().lift();
+                quote! {
+                    @override
+                    String toString() {
+                        return rustCallWithLifter(
+                            (status) => $(fmt.ffi_func().name())($ffi_converter_name.lower(this), status),
+                            $lifter,
+                        );
+                    }
+                }
+            });
+        let variant_to_string =
+            display_to_string.is_none() && type_helper.get_ci().is_name_used_as_error(obj.name());
+
         for (index, variant_obj) in obj.variants().iter().enumerate() {
             for f in variant_obj.fields() {
                 type_helper.include_once_check(&f.as_codetype().canonical_name(), &f.as_type());
@@ -270,35 +289,35 @@ pub fn generate_enum(obj: &Enum, type_helper: &dyn TypeHelperRenderer) -> dart::
             }).collect();
 
             // Generate simple toString() method for error enum variants
-            let to_string_method: dart::Tokens =
-                if type_helper.get_ci().is_name_used_as_error(obj.name()) {
-                    if variant_obj.has_fields() {
-                        let field_interpolations = variant_obj
-                            .fields()
-                            .iter()
-                            .enumerate()
-                            .map(|(i, field)| format!("${}", field_name(field, i)))
-                            .collect::<Vec<_>>()
-                            .join(", ");
-                        let to_string_with_fields =
-                            format!("\"{variant_dart_cls_name}({field_interpolations})\"");
-                        quote!(
-                            @override
-                            String toString() {
-                                return $(&to_string_with_fields);
-                            }
-                        )
-                    } else {
-                        quote!(
-                            @override
-                            String toString() {
-                                return $(format!("\"{}\"", variant_dart_cls_name));
-                            }
-                        )
-                    }
+            // without an exported Display
+            let to_string_method: dart::Tokens = if variant_to_string {
+                if variant_obj.has_fields() {
+                    let field_interpolations = variant_obj
+                        .fields()
+                        .iter()
+                        .enumerate()
+                        .map(|(i, field)| format!("${}", field_name(field, i)))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    let to_string_with_fields =
+                        format!("\"{variant_dart_cls_name}({field_interpolations})\"");
+                    quote!(
+                        @override
+                        String toString() {
+                            return $(&to_string_with_fields);
+                        }
+                    )
                 } else {
-                    quote!()
-                };
+                    quote!(
+                        @override
+                        String toString() {
+                            return $(format!("\"{}\"", variant_dart_cls_name));
+                        }
+                    )
+                }
+            } else {
+                quote!()
+            };
 
             variants.push(quote!{
                 class $variant_dart_cls_name extends $dart_cls_name {
@@ -373,6 +392,8 @@ pub fn generate_enum(obj: &Enum, type_helper: &dyn TypeHelperRenderer) -> dart::
                 RustBuffer lower();
                 int allocationSize();
                 int write( Uint8List buf);
+
+                $(display_to_string)
             }
 
             class $ffi_converter_name {

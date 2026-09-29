@@ -37,4 +37,21 @@ impl std::fmt::Display for ProcTraitMethods {
     }
 }
 
+#[derive(Debug, thiserror::Error, uniffi::Error)]
+#[uniffi::export(Display)]
+pub enum DisplayError {
+    #[error("closed")]
+    Closed,
+    #[error("transport: {0}")]
+    Transport(String),
+}
+
+#[uniffi::export]
+fn throw_display(message: Option<String>) -> Result<(), DisplayError> {
+    match message {
+        Some(message) => Err(DisplayError::Transport(message)),
+        None => Err(DisplayError::Closed),
+    }
+}
+
 uniffi::include_scaffolding!("api");

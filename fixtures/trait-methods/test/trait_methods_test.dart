@@ -52,4 +52,20 @@ void main() {
       expect(m.debugString(), equals('ProcTraitMethods { val: "yo" }'));
     });
   });
+
+  group('DisplayError', () {
+    test('toString renders the exported Display', () {
+      expect(
+        () => throwDisplay(message: null),
+        throwsA(isA<ClosedDisplayException>()
+            .having((e) => e.toString(), 'toString', 'closed')),
+      );
+      expect(
+        () => throwDisplay(message: 'reset'),
+        throwsA(isA<TransportDisplayException>()
+            .having((e) => e.toString(), 'toString', 'transport: reset')),
+      );
+      expect(ClosedDisplayException().toString(), equals('closed'));
+    });
+  });
 }
