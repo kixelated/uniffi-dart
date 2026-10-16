@@ -11,6 +11,12 @@ void main() {
     expect(api.getLiveCount(), 0);
   });
 
+  test('DisposedObjectArgumentThrows', () {
+    final resource = api.getResource();
+    resource.dispose();
+    expect(() => api.cloneResource(resource), throwsStateError);
+  });
+
   test('MapDecrementsLiveCount', () {
     final journal = api.getResourceJournalMap();
     expect(api.getLiveCount(), 2);

@@ -55,6 +55,11 @@ fn get_resource() -> Arc<Resource> {
 }
 
 #[uniffi::export]
+fn clone_resource(resource: Arc<Resource>) -> Arc<Resource> {
+    resource
+}
+
+#[uniffi::export]
 fn get_resource_journal_list() -> ResourceJournalList {
     ResourceJournalList { resources: vec![get_resource(), get_resource()] }
 }
