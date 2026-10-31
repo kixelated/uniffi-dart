@@ -62,6 +62,7 @@ members = [
 
     # Working fixtures - only include fixtures that actually work
     "fixtures/arithmetic",
+    "fixtures/input-scratch",
     "fixtures/bytes_types",
     "fixtures/library_config",
     "fixtures/callbacks",

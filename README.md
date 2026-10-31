@@ -133,3 +133,19 @@ uniffi-dart version and `A.B.C` is the targeted uniffi-rs version.
 The code is released under MIT License. See the LICENSE file in the repository root for details.
 
 The project is building on top of the great work of Mozillas UniFFI, with inspirations from other external frontends (like Kotlin and Go) and with the help of the [ffi-gen](https://github.com/acterglobal/ffi-gen) lib. Thanks folks!
+
+## MoQ upstream audit
+
+Checked [Uniffi-Dart/uniffi-dart](https://github.com/Uniffi-Dart/uniffi-dart) through
+[`e644a4ad`](https://github.com/Uniffi-Dart/uniffi-dart/commit/e644a4ad980f72697aba211fd30cb4fbd8fc7324)
+on 2026-10-31; its public GitHub advisory list was empty.
+The MoQ branch already carries the library-mode CLI, enum-name disambiguation,
+RustBuffer/result ownership, and disposed-object guards. This port adds the
+allocation-failure cleanup from
+[`71dc9f8b`](https://github.com/Uniffi-Dart/uniffi-dart/commit/71dc9f8b8f54cdfa6ef5d08f24e70cd93ef11d7d)
+and disposal status reservation from
+[`a2751c4c`](https://github.com/Uniffi-Dart/uniffi-dart/commit/a2751c4cb0df3d28b5efab0bac1dadf439d9b163),
+with their allocation-failure tests. MoQ currently exports no foreign traits,
+custom types, or dollar-bearing string defaults; the remaining incoming-callback,
+custom-FFI, and default-escaping fixes do not affect its generated bindings.
+Dependency updates and unrelated fixture/CI repairs are excluded.
