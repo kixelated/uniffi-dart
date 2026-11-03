@@ -123,17 +123,30 @@ void main() {
     expect(result.b, 42);
   });
 
-  test('duplicate wakeups before and after Rust future completion', () async {
-    final gate = WakeGate();
-    final pending = gate.wait();
-    gate.release();
-    await pending;
-    // The generated continuation and Rust future have been freed at this point.
-    gate.wakeAgain();
-    // Let any queued native callback run before the test finishes.
-    await void_();
-    gate.dispose();
-  });
+  for (final tokio in [false, true]) {
+    test('Rust future suspension and cross-thread wakes (tokio: $tokio)', () async {
+      final gate = WakeGate();
+      var completed = false;
+      final pending = (tokio ? gate.waitWithTokio() : gate.wait())
+          .then((_) => completed = true);
+      try {
+        // A Rust-only call must progress while the first Rust future is still
+        // waiting for work. This also drains queued native callbacks, so an
+        // incorrectly completed pending future cannot hide in the event queue.
+        expect(await sayAfter(ms: 0, who: 'Bob'), 'Hello, Bob!');
+        expect(completed, isFalse);
+      } finally {
+        gate.release(); // duplicate wakeups from joined Rust worker threads
+        await pending;
+      }
+      expect(completed, isTrue);
+      // The generated continuation and Rust future have now been freed. Wake
+      // again from a Rust worker, then drain queued native callbacks.
+      gate.wakeAgain();
+      await void_();
+      gate.dispose();
+    });
+  }
 
   test('udl_async_function', () async {
     expect(await alwaysReady(), isTrue);

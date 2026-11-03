@@ -169,8 +169,11 @@ The async fixture tests check results, errors, and pending-future progress witho
 wall-clock thresholds. A Dart `Completer` controls a foreign async callback, so
 its Rust caller must remain pending while a second call completes, then resume
 when released. This tests suspension and independent progress without assuming
-anything about scheduler speed. A manually released Rust future also tests duplicate wakes both before and after
-completion, retaining the late-wake check without a sleeping background thread.
+anything about scheduler speed. Manually released Rust futures test the same pending/progress contract through
+both ordinary and Tokio-wrapped calls. Joined Rust workers send duplicate wakes
+before completion and another wake after Dart has freed the future, without
+sleeping threads or scheduling margins. Zero-delay timer calls check their
+results; the controlled gates prove suspension and cross-thread wake handling.
 Error assertions stay outside catch blocks so a
 successful call cannot accidentally satisfy an expected-error test.
 

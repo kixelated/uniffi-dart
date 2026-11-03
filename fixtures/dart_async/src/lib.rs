@@ -88,8 +88,20 @@ impl WakeGate {
 
     /// Wake the last polled future, even after it has completed.
     pub fn wake_again(&self) {
-        let waker = self.state.lock().unwrap().waker.clone().unwrap();
-        waker.wake();
+        let waker = self.state.lock().unwrap().waker.clone();
+        if let Some(waker) = waker {
+            // Join so the test controls exactly when the cross-thread wake has
+            // happened, including wakes after Dart has freed the Rust future.
+            thread::spawn(move || waker.wake()).join().unwrap();
+        }
+    }
+}
+
+#[uniffi::export(async_runtime = "tokio")]
+impl WakeGate {
+    /// Wait for release through UniFFI's Tokio runtime wrapper.
+    pub async fn wait_with_tokio(&self) {
+        self.wait().await;
     }
 }
 
