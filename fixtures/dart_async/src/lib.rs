@@ -51,51 +51,45 @@ impl TimerFuture {
     }
 }
 
-/// Non-blocking timer future that intentionally misbehaves.
-pub struct BrokenTimerFuture {
-    shared_state: Arc<Mutex<SharedState>>,
+/// A manually completed future that retains a waker after completion.
+#[derive(uniffi::Object)]
+pub struct WakeGate {
+    state: Mutex<SharedState>,
 }
 
-impl Future for BrokenTimerFuture {
-    type Output = ();
-
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let mut shared_state = self.shared_state.lock().unwrap();
-        if shared_state.completed {
-            Poll::Ready(())
-        } else {
-            shared_state.waker = Some(cx.waker().clone());
-            Poll::Pending
-        }
+#[uniffi::export]
+impl WakeGate {
+    /// Create a gate whose future starts pending.
+    #[uniffi::constructor]
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self { state: Mutex::new(SharedState { completed: false, waker: None }) })
     }
-}
 
-impl BrokenTimerFuture {
-    pub fn new(duration: Duration, fail_after: Duration) -> Self {
-        let shared_state = Arc::new(Mutex::new(SharedState { completed: false, waker: None }));
-
-        let thread_shared_state = shared_state.clone();
-        // Let's mimic an event coming from somewhere else, like the system.
-        thread::spawn(move || {
-            thread::sleep(duration);
-            let mut shared_state: MutexGuard<_> = thread_shared_state.lock().unwrap();
-            shared_state.completed = true;
-            if let Some(waker) = shared_state.waker.take() {
-                // Do not consume `waker`.
-                waker.wake_by_ref();
-                // And this is the important part. We are going to call `wake()` a second time.
-                if fail_after.is_zero() {
-                    waker.wake();
-                } else {
-                    thread::spawn(move || {
-                        thread::sleep(fail_after);
-                        waker.wake();
-                    });
-                }
+    /// Wait until the gate is released.
+    pub async fn wait(&self) {
+        std::future::poll_fn(|cx| {
+            let mut state = self.state.lock().unwrap();
+            if state.completed {
+                Poll::Ready(())
+            } else {
+                state.waker = Some(cx.waker().clone());
+                Poll::Pending
             }
-        });
+        })
+        .await;
+    }
 
-        Self { shared_state }
+    /// Complete the future and wake it twice.
+    pub fn release(&self) {
+        self.state.lock().unwrap().completed = true;
+        self.wake_again();
+        self.wake_again();
+    }
+
+    /// Wake the last polled future, even after it has completed.
+    pub fn wake_again(&self) {
+        let waker = self.state.lock().unwrap().waker.clone().unwrap();
+        waker.wake();
     }
 }
 
@@ -191,16 +185,6 @@ pub fn list_async_items() -> Vec<AsyncItem> {
         AsyncItem { id: 1, state: AsyncItemState::Ready { timestamp_ms: 1111 } },
         AsyncItem { id: 2, state: AsyncItemState::Pending { reason: "syncing".to_string() } },
     ]
-}
-
-/// Non-blocking timer future used to test callback cancellation.
-#[uniffi::export]
-pub async fn broken_sleep(ms: u16, fail_after: u16) {
-    BrokenTimerFuture::new(
-        Duration::from_millis(ms.into()),
-        Duration::from_millis(fail_after.into()),
-    )
-    .await;
 }
 
 /// Proc-macro-defined object with async methods (Megaphone)

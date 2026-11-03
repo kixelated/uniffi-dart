@@ -73,8 +73,8 @@ Run the flake checks:
 nix flake check
 ```
 
-CI uses this as a Nix smoke check. The existing GitHub Actions workflows remain
-the authoritative full Rust, Dart, lint, and downstream test suite.
+CI uses this as a formatting and toolchain smoke check. The `Testing` workflow
+runs the full Rust and Dart fixture suite and lints; see [Fork CI coverage](#fork-ci-coverage).
 
 Run the existing fixture test suite from a Nix shell:
 
@@ -138,7 +138,8 @@ The project is building on top of the great work of Mozillas UniFFI, with inspir
 
 Checked [Uniffi-Dart/uniffi-dart](https://github.com/Uniffi-Dart/uniffi-dart) through
 [`e644a4ad`](https://github.com/Uniffi-Dart/uniffi-dart/commit/e644a4ad980f72697aba211fd30cb4fbd8fc7324)
-on 2026-10-31; its public GitHub advisory list was empty.
+on 2026-11-02; its head is unchanged since 2026-10-31 and its public GitHub
+advisory list was empty.
 The MoQ branch already carries the library-mode CLI, enum-name disambiguation,
 RustBuffer/result ownership, and disposed-object guards. This port adds the
 allocation-failure cleanup from
@@ -148,4 +149,42 @@ and disposal status reservation from
 with their allocation-failure tests. MoQ currently exports no foreign traits,
 custom types, or dollar-bearing string defaults; the remaining incoming-callback,
 custom-FFI, and default-escaping fixes do not affect its generated bindings.
-Dependency updates and unrelated fixture/CI repairs are excluded.
+Dependency updates are excluded.
+
+
+## Fork CI coverage
+
+On `moq-0.32`, pull requests and branch pushes run these read-only workflows:
+
+- **Testing** runs `cargo nextest run --all --all-features` on stable, Rust 1.91
+  (MSRV), and nightly. This generates bindings, builds the Rust fixture libraries,
+  and runs their Dart tests, including async functions, callbacks, object disposal,
+  input-scratch ownership, library configuration, and enum name collisions. Each
+  compiler runs independently; nightly remains advisory. Lints run formatting and
+  Clippy with all features and targets, including the binary CLI.
+- **Nix** runs `nix flake check` for formatting and verifies the tools in each dev
+  shell. It does not run the fixture suite and cannot replace Testing.
+
+The async fixture tests check results, errors, and pending-future progress without
+wall-clock thresholds. A Dart `Completer` controls a foreign async callback, so
+its Rust caller must remain pending while a second call completes, then resume
+when released. This tests suspension and independent progress without assuming
+anything about scheduler speed. A manually released Rust future also tests duplicate wakes both before and after
+completion, retaining the late-wake check without a sleeping background thread.
+Error assertions stay outside catch blocks so a
+successful call cannot accidentally satisfy an expected-error test.
+
+The upstream **Test Downstream** wallet jobs are removed on this fork. At the
+2026-11-02 audit, rust-payjoin's wrapper called a different generator API, and
+bdk-dart's patch was unused and its lockfile failed under `--locked`. Both tracked
+moving default branches outside this fork's supported consumer. Adapting those
+applications would test an integration MoQ does not ship.
+
+[MoQ](https://github.com/moq-dev/moq) owns the downstream integration instead:
+[`just dart check`](https://github.com/moq-dev/moq/blob/main/sh/dart/check.sh)
+regenerates bindings with its pinned generator, compares both generated files,
+analyzes and tests both Dart packages, and checks publish contents. Its
+[cross-language interop suite](https://github.com/moq-dev/moq/tree/main/test/interop)
+exercises Dart against the other bindings. A fork generator change still needs a
+MoQ pin and regenerated-output review plus these downstream checks before MoQ
+uses it; a green fork check alone does not establish downstream compatibility.
