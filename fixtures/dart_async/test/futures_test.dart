@@ -127,8 +127,9 @@ void main() {
     test('Rust future suspension and cross-thread wakes (tokio: $tokio)', () async {
       final gate = WakeGate();
       var completed = false;
-      final pending = (tokio ? gate.waitWithTokio() : gate.wait())
-          .then((_) => completed = true);
+      final pending = (tokio ? gate.waitWithTokio() : gate.wait()).then(
+        (_) => completed = true,
+      );
       try {
         // A Rust-only call must progress while the first Rust future is still
         // waiting for work. This also drains queued native callbacks, so an
