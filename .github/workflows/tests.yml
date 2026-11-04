@@ -1,7 +1,11 @@
+permissions:
+  contents: read
+
 on:
   push:
     branches:
       - "main"
+      - "moq-0.32"
       - "release/**"
   pull_request:
 
@@ -12,6 +16,7 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         rust:
           - stable
@@ -20,6 +25,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
@@ -44,6 +51,7 @@ jobs:
     name: Lints
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         rust:
           - stable
@@ -52,6 +60,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master

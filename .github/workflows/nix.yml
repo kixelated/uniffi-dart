@@ -1,9 +1,13 @@
+permissions:
+  contents: read
+
 name: Nix
 
 on:
   push:
     branches:
       - "main"
+      - "moq-0.32"
   pull_request:
 
 env:
@@ -16,6 +20,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
@@ -39,6 +45,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
